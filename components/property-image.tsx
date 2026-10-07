@@ -19,6 +19,21 @@ const PALETTES: Array<[string, string, string]> = [
 
 const BUILDING = ["apartment", "villa", "penthouse", "land"] as const;
 
+type Variant = (typeof BUILDING)[number];
+
+const FA_TYPE: Record<string, Variant> = {
+  "آپارتمان": "apartment",
+  "ویلا": "villa",
+  "خانه ویلایی": "villa",
+  "پنت‌هاوس": "penthouse",
+  "زمین": "land",
+  "تجاری": "apartment",
+  apartment: "apartment",
+  villa: "villa",
+  penthouse: "penthouse",
+  land: "land",
+};
+
 export function PropertyImage({
   tone = 0,
   type = "apartment",
@@ -26,12 +41,12 @@ export function PropertyImage({
   label,
 }: {
   tone?: number;
-  type?: (typeof BUILDING)[number];
+  type?: string;
   className?: string;
   label?: string;
 }) {
   const [sky, accent, ground] = PALETTES[tone % PALETTES.length];
-  const variant = BUILDING.indexOf(type as (typeof BUILDING)[number]) >= 0 ? type : "apartment";
+  const variant: Variant = FA_TYPE[type] ?? "apartment";
   const gid = `pg${tone % PALETTES.length}${variant}`;
 
   return (

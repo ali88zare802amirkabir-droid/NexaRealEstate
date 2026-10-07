@@ -6,6 +6,7 @@ import { Panel, Badge, Button, Select } from "@/components/ui";
 import { TrendingUp, Users, Building2, DollarSign, CalendarDays, MapPin, PieChart, BarChart2, Activity, Eye, Heart, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useApp } from "@/lib/store";
 import { BarChart, LineChart, PieChart as PieChartComp, AreaChart } from "@/components/charts";
+import { dailySeries, typeBreakdown, purposeBreakdown, areaStats } from "@/lib/metrics";
 
 const PERIODS = [
   { value: "7d", label: "۷ روز اخیر" },
@@ -14,8 +15,14 @@ const PERIODS = [
   { value: "1y", label: "۱ سال اخیر" },
 ] as const;
 
-const categories = ["آپارتمان", "ویلا", "پنت‌هاوس", "زمین", "اداری", "مغازه"];
-const purposes = ["خرید", "اجاره"];
+const KPI_TONE: Record<string, string> = {
+  accent: "bg-accent/15 text-accent",
+  cyan: "bg-cyan/15 text-cyan",
+  danger: "bg-danger/15 text-danger",
+  violet: "bg-violet/15 text-violet",
+  ok: "bg-ok/15 text-ok",
+  warn: "bg-warn/15 text-warn",
+};
 
 export default function AnalyticsPage() {
   const { properties, agents, viewings, customers, areas, reviews } = useApp();
@@ -35,36 +42,14 @@ export default function AnalyticsPage() {
     { label: "درخواست بازدید", value: scheduledViewings, icon: CalendarDays, color: "violet", delta: "+5%", deltaLabel: "از ماه قبل" },
     { label: "فروش‌های نهایی", value: properties.filter((p) => p.status === "Sold").length, icon: TrendingUp, color: "ok", delta: "+3%", deltaLabel: "از ماه قبل" },
     { label: "مجموع درآمد", value: formatMoney(totalRevenue), icon: DollarSign, color: "warn", delta: "+22%", deltaLabel: "از ماه قبل" },
-    { label: "مشاوران فعال", value: agents.length, icon: Users, color: "indigo", delta: "0%", deltaLabel: "بدون تغییر" },
-    { label: "مشتریان", value: customers.length, icon: Users, color: "success", delta: "+7%", deltaLabel: "از ماه قبل" },
+    { label: "مشاوران فعال", value: agents.length, icon: Users, color: "violet", delta: "0%", deltaLabel: "بدون تغییر" },
+    { label: "مشتریان", value: customers.length, icon: Users, color: "ok", delta: "+7%", deltaLabel: "از ماه قبل" },
   ];
 
-  // Generate mock chart data
-  const viewsData = Array.from({ length: 14 }, (_, i) => ({
-    date: formatDate(new Date(Date.now() - (13 - i) * 86400000).toISOString()),
-    views: Math.floor(Math.random() * 500) + 100,
-    favorites: Math.floor(Math.random() * 50) + 10,
-  }));
-
-  const typeData = categories.map((c) => ({
-    category: c,
-    count: Math.floor(Math.random() * 20) + 1,
-    value: Math.floor(Math.random() * 100000000000) + 5000000000,
-  }));
-
-  const purposeData = purposes.map((p) => ({
-    purpose: p,
-    count: properties.filter((pr) => pr.purpose === (p === "خرید" ? "Buy" : "Rent")).length,
-    avgPrice: properties.filter((pr) => pr.purpose === (p === "خرید" ? "Buy" : "Rent")).reduce((s, pr) => s + pr.price, 0) / 
-             Math.max(1, properties.filter((pr) => pr.purpose === (p === "خرید" ? "Buy" : "Rent")).length),
-  }));
-
-  const cityData = CITIES.slice(0, 8).map((c) => ({
-    city: c,
-    properties: Math.floor(Math.random() * 20) + 1,
-    avgPrice: Math.floor(Math.random() * 200000000000) + 50000000000,
-    views: Math.floor(Math.random() * 1000) + 100,
-  }));
+  const viewsData = dailySeries(14);
+  const typeData = typeBreakdown();
+  const purposeData = purposeBreakdown();
+  const regionData = areaStats(8);
 
   return (
     <div className="space-y-6">
@@ -87,7 +72,7 @@ export default function AnalyticsPage() {
           const deltaColor = kpi.delta.startsWith("+") ? "ok" : kpi.delta.startsWith("-") ? "danger" : "ink-3";
           return (
             <Panel key={i} className="flex items-center gap-3">
-              <div className={cn("flex size-10 items-center justify-center rounded-lg", `${kpi.color}/15 text-${kpi.color}`)}>
+              <div className={cn("flex size-10 items-center justify-center rounded-lg", KPI_TONE[kpi.color] ?? KPI_TONE.accent)}>
                 <Icon className="size-5" />
               </div>
               <div className="min-w-0">
@@ -110,14 +95,14 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <Panel>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[13.5px] font-bold text-ink">بازدیدها و علاقه‌مندی‌ها (۱۴ روز)</h2>
+            <h2 className="text-[13.5px] font-bold text-ink">بازدیدها و بازدیدهای ملک (۱۴ روز)</h2>
           </div>
           <BarChart
             data={viewsData}
-            xKey="date"
+            xKey="label"
             series={[
-              { key: "views", label: "بازدید", color: "accent" },
-              { key: "favorites", label: "علاقه‌مندی", color: "danger" },
+              { key: "views", label: "بازدید صفحه", color: "accent" },
+              { key: "viewings", label: "بازدید ملک", color: "cyan" },
             ]}
             height={280}
             showLegend
@@ -130,8 +115,8 @@ export default function AnalyticsPage() {
           </div>
           <PieChartComp
             data={typeData}
-            labelKey="category"
-            valueKey="count"
+            labelKey="label"
+            valueKey="value"
             colors={["accent", "cyan", "violet", "warn", "ok", "indigo"]}
             height={280}
             showLegend
@@ -140,14 +125,13 @@ export default function AnalyticsPage() {
 
         <Panel className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[13.5px] font-bold text-ink">روند قیمت میانگین بر اساس شهر</h2>
+            <h2 className="text-[13.5px] font-bold text-ink">میانگین قیمت بر اساس منطقه</h2>
           </div>
           <LineChart
-            data={cityData}
-            xKey="city"
+            data={regionData}
+            xKey="label"
             series={[
-              { key: "avgPrice", label: "قیمت میانگین", color: "accent" },
-              { key: "views", label: "بازدید", color: "cyan" },
+              { key: "avgPrice", label: "میانگین قیمت", color: "accent" },
             ]}
             height={280}
             showLegend
@@ -161,10 +145,9 @@ export default function AnalyticsPage() {
           </div>
           <BarChart
             data={purposeData}
-            xKey="purpose"
+            xKey="label"
             series={[
-              { key: "count", label: "تعداد", color: "accent" },
-              { key: "avgPrice", label: "میانگین قیمت", color: "warn" },
+              { key: "value", label: "تعداد", color: "accent" },
             ]}
             height={280}
             showLegend
@@ -177,11 +160,10 @@ export default function AnalyticsPage() {
             <h2 className="text-[13.5px] font-bold text-ink">ملک‌ها بر اساس منطقه</h2>
           </div>
           <AreaChart
-            data={cityData}
-            xKey="city"
+            data={regionData}
+            xKey="label"
             series={[
-              { key: "properties", label: "تعداد ملک", color: "accent" },
-              { key: "views", label: "بازدید", color: "cyan" },
+              { key: "count", label: "تعداد ملک", color: "accent" },
             ]}
             height={280}
             showLegend
@@ -242,5 +224,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
-const CITIES = ["تهران", "مشهد", "اصفهان", "شیراز", "تبریز", "کرمانشاه", "رشت", "یزد"];

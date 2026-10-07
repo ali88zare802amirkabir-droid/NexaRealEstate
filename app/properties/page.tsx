@@ -26,7 +26,7 @@ export default function PropertiesPage() {
     type: "All" as (typeof TYPES)[number],
     area: "All",
     priceMin: 0,
-    priceMax: 2000000000,
+    priceMax: 0,
     beds: 0,
     hasElevator: false,
     hasBalcony: false,
@@ -47,7 +47,8 @@ export default function PropertiesPage() {
     if (filter.purpose !== "All" && p.purpose !== filter.purpose) return false;
     if (filter.type !== "All" && p.type !== filter.type) return false;
     if (filter.area !== "All" && p.areaId !== filter.area) return false;
-    if (p.price < filter.priceMin || p.price > filter.priceMax) return false;
+    if (p.price < filter.priceMin) return false;
+    if (filter.priceMax > 0 && p.price > filter.priceMax) return false;
     if (filter.beds > 0 && p.beds < filter.beds) return false;
     if (filter.hasElevator && !p.elevator) return false;
     if (filter.hasBalcony && !p.balcony) return false;
@@ -73,7 +74,7 @@ export default function PropertiesPage() {
       type: "All",
       area: "All",
       priceMin: 0,
-      priceMax: 2000000000,
+      priceMax: 0,
       beds: 0,
       hasElevator: false,
       hasBalcony: false,
@@ -82,7 +83,7 @@ export default function PropertiesPage() {
     });
   };
 
-  const hasActiveFilters = filter.query || filter.purpose !== "All" || filter.type !== "All" || filter.area !== "All" || filter.priceMin > 0 || filter.priceMax < 2000000000 || filter.beds > 0 || filter.hasElevator || filter.hasBalcony || filter.hasParking || filter.furnished;
+  const hasActiveFilters = filter.query || filter.purpose !== "All" || filter.type !== "All" || filter.area !== "All" || filter.priceMin > 0 || filter.priceMax > 0 || filter.beds > 0 || filter.hasElevator || filter.hasBalcony || filter.hasParking || filter.furnished;
 
   return (
     <div className="space-y-6">
@@ -195,8 +196,8 @@ export default function PropertiesPage() {
                 <Input
                   type="number"
                   value={filter.priceMax}
-                  onChange={(e) => setFilter((f) => ({ ...f, priceMax: Number(e.target.value) || 2000000000 }))}
-                  placeholder="حداکثر"
+                  onChange={(e) => setFilter((f) => ({ ...f, priceMax: Number(e.target.value) || 0 }))}
+                  placeholder="حداکثر (۰=نامحدود)"
                 />
               </div>
             </div>

@@ -1,344 +1,119 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import {
+  ResponsiveContainer,
+  BarChart as RBarChart,
+  Bar,
+  LineChart as RLineChart,
+  Line,
+  AreaChart as RAreaChart,
+  Area,
+  PieChart as RPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+
+export const CHART_HEX: Record<string, string> = {
+  accent: "#4c9aff",
+  cyan: "#2fd4e8",
+  danger: "#f4736f",
+  ok: "#35d08a",
+  warn: "#f5b53d",
+  violet: "#9d8bf5",
+  indigo: "#818cf8",
+};
+
+const hex = (name: string) => CHART_HEX[name] ?? name;
+
+const faNum = (v: number | string) => Number(v).toLocaleString("fa-IR");
+
+function DarkTooltip({ active, payload, label, formatter }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-edge bg-surface-elevated px-3 py-2 shadow-pop" dir="rtl">
+      {label !== undefined ? <p className="mb-1 text-[11px] font-bold text-ink">{String(label)}</p> : null}
+      <div className="space-y-1">
+        {payload.map((p: any, i: number) => (
+          <p key={i} className="flex items-center gap-1.5 text-[11px] text-ink-2">
+            <span className="size-2 rounded-full" style={{ backgroundColor: p.color ?? p.payload?.fill }} />
+            {p.name}: <span className="font-bold text-ink">{formatter ? formatter(p.value) : faNum(p.value)}</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const AXIS_TICK = { fontSize: 10, fill: "#8b9bb0" } as const;
+
+interface SeriesDef {
+  key: string;
+  label: string;
+  color: string;
+}
 
 interface ChartProps {
   data: any[];
   xKey: string;
-  series: { key: string; label: string; color: string }[];
+  series: SeriesDef[];
   height?: number;
   showLegend?: boolean;
   formatValue?: (value: number) => string;
   horizontal?: boolean;
 }
 
-export function BarChart({
-  data,
-  xKey,
-  series,
-  height = 250,
-  showLegend = true,
-  formatValue,
-  horizontal = false,
-}: ChartProps) {
+export function BarChart({ data, xKey, series, height = 280, showLegend = true, formatValue, horizontal = false }: ChartProps) {
   if (!data.length) return null;
-
-  const maxValue = Math.max(
-    ...data.flatMap((d) => series.map((s) => Number(d[s.key])))
-  );
-  const barHeight = horizontal ? 24 : 18;
-  const chartHeight = Math.max(height, data.length * (barHeight + 8) + 40);
-  const padding = { top: 20, right: 30, bottom: 30, left: horizontal ? 100 : 60 };
-  const width = 100; // Will be made responsive via container
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-
+  const fmt = formatValue ?? faNum;
   return (
-    <div className="relative w-full h-[{chartHeight}px]" style={{ height: chartHeight }}>
-      <svg
-        className="absolute inset-0"
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${width} ${chartHeight}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Bar chart showing data trends"
-      >
-        {/* Horizontal grid lines */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const y = padding.top + (innerHeight * i) / 4;
-          return (
-            <line
-              key={`hgrid-${i}`}
-              x1={padding.left}
-              y1={y}
-              x2={width - padding.right}
-              y2={y}
-              stroke="#e2e8f0"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Bars */}
-        {series.map((serie, serieIndex) => {
-          const barWidth = innerWidth / (series.length * 1.2);
-          const offset =
-            (serieIndex - (series.length - 1) / 2) * barWidth * 1.2;
-          return data.map((d, index) => {
-            const value = Number(d[serie.key]) || 0;
-            const barHeightValue =
-              (innerHeight * value) / (maxValue || 1);
-            const x =
-              padding.left +
-              offset +
-              (innerWidth * index) / (data.length - 1 || 1) -
-              barWidth / 2;
-            const y =
-              chartHeight -
-              padding.bottom -
-              barHeightValue;
-
-            return (
-              <rect
-                key={`bar-${serieIndex}-${index}`}
-                x={x}
-                y={y}
-                width={barWidth}
-                height={barHeightValue}
-                fill={serie.color}
-                rx={2}
-              />
-            );
-          });
-        })}
-
-        {/* X-axis labels (categories) */}
-        {data.map((d, index) => {
-          const x =
-            padding.left +
-            (innerWidth * index) / (data.length - 1 || 1);
-          const y = chartHeight - padding.bottom + 18;
-          return (
-            <text
-              key={`xlabel-${index}`}
-              x={x}
-              y={y}
-              textAnchor="middle"
-              fontSize="11"
-              fill="#64748b"
-            >
-              {String(d[xKey])}
-            </text>
-          );
-        })}
-
-        {/* Y-axis labels (values) */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const value = (maxValue * i) / 4;
-          const y =
-            chartHeight -
-            padding.bottom -
-            (innerHeight * i) / 4;
-          const formatted = formatValue
-            ? formatValue(value)
-            : value.toLocaleString("fa-IR");
-          return (
-            <text
-              key={`ylabel-${i}`}
-              x={padding.left - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize="10"
-              fill="#64748b"
-            >
-              {formatted}
-            </text>
-          );
-        })}
-
-        {/* Legend */}
-        {showLegend && (
-          <g transform={`translate(${width - padding.right + 10}, ${padding.top + 10})`}>
-            {series.map((s, i) => (
-              <g key={`legend-${i}`} transform={`translate(0, ${i * 20})`}>
-                <rect
-                  x={0}
-                  y={0}
-                  width={14}
-                  height={8}
-                  fill={s.color}
-                  rx={1}
-                />
-                <text
-                  x={18}
-                  y={12}
-                  fontSize="11"
-                  fill="#334155"
-                >
-                  {s.label}
-                </text>
-              </g>
-            ))}
-          </g>
-        )}
-      </svg>
+    <div style={{ height }} dir="ltr">
+      <ResponsiveContainer width="100%" height="100%">
+        <RBarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={{ top: 8, right: 8, bottom: 8, left: 8 }} barGap={3}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#223041" vertical={!horizontal} horizontal={horizontal} />
+          {horizontal ? (
+            <>
+              <XAxis type="number" tick={AXIS_TICK} tickFormatter={fmt} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey={xKey} tick={AXIS_TICK} width={80} axisLine={false} tickLine={false} />
+            </>
+          ) : (
+            <>
+              <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={false} tickLine={false} interval="preserveStart" minTickGap={24} />
+              <YAxis tick={AXIS_TICK} tickFormatter={fmt} axisLine={false} tickLine={false} width={48} orientation="right" />
+            </>
+          )}
+          <Tooltip content={<DarkTooltip formatter={formatValue} />} cursor={{ fill: "#17202d" }} />
+          {showLegend ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
+          {series.map((s) => (
+            <Bar key={s.key} dataKey={s.key} name={s.label} fill={hex(s.color)} radius={horizontal ? [4, 8, 8, 4] : [6, 6, 2, 2]} maxBarSize={26} />
+          ))}
+        </RBarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
-export function LineChart({
-  data,
-  xKey,
-  series,
-  height = 250,
-  showLegend = true,
-  formatValue,
-}: ChartProps) {
+export function LineChart({ data, xKey, series, height = 280, showLegend = true, formatValue }: ChartProps) {
   if (!data.length) return null;
-
-  const maxValue = Math.max(
-    ...data.flatMap((d) => series.map((s) => Number(d[s.key])))
-  );
-  const minValue = Math.min(
-    ...data.flatMap((d) => series.map((s) => Number(d[s.key])))
-  );
-  const valueRange = maxValue - minValue || 1;
-  const padding = { top: 20, right: 30, bottom: 30, left: 60 };
-  const chartHeight = height;
-  const width = 100;
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-
+  const fmt = formatValue ?? faNum;
   return (
-    <div className="relative w-full h-[{chartHeight}px]" style={{ height: chartHeight }}>
-      <svg
-        className="absolute inset-0"
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${width} ${chartHeight}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Line chart showing data trends"
-      >
-        {/* Horizontal grid lines */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const y = padding.top + (innerHeight * i) / 4;
-          return (
-            <line
-              key={`hgrid-${i}`}
-              x1={padding.left}
-              y1={y}
-              x2={width - padding.right}
-              y2={y}
-              stroke="#e2e8f0"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Lines */}
-        {series.map((serie, serieIndex) => {
-          const points = data
-            .map((d, index) => {
-              const value = Number(d[serie.key]) || 0;
-              const x =
-                padding.left +
-                (innerWidth * index) / (data.length - 1 || 1);
-              const y =
-                chartHeight -
-                padding.bottom -
-                ((innerHeight * (value - minValue)) / valueRange);
-              return `${x},${y}`;
-            })
-            .join(" ");
-
-          return (
-            <path
-              key={`line-${serieIndex}`}
-              d={`M${points}`}
-              fill="none"
-              stroke={serie.color}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          );
-        })}
-
-        {/* Points */}
-        {series.map((serie, serieIndex) => {
-          return data.map((d, index) => {
-            const value = Number(d[serie.key]) || 0;
-            const x =
-              padding.left +
-              (innerWidth * index) / (data.length - 1 || 1);
-            const y =
-              chartHeight -
-              padding.bottom -
-              ((innerHeight * (value - minValue)) / valueRange);
-            return (
-              <circle
-                key={`point-${serieIndex}-${index}`}
-                cx={x}
-                cy={y}
-                r={3}
-                fill={serie.color}
-              />
-            );
-          });
-        })}
-
-        {/* X-axis labels (categories) */}
-        {data.map((d, index) => {
-          const x =
-            padding.left +
-            (innerWidth * index) / (data.length - 1 || 1);
-          const y = chartHeight - padding.bottom + 18;
-          return (
-            <text
-              key={`xlabel-${index}`}
-              x={x}
-              y={y}
-              textAnchor="middle"
-              fontSize="11"
-              fill="#64748b"
-            >
-              {String(d[xKey])}
-            </text>
-          );
-        })}
-
-        {/* Y-axis labels (values) */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const value = minValue + (valueRange * i) / 4;
-          const y =
-            chartHeight -
-            padding.bottom -
-            (innerHeight * i) / 4;
-          const formatted = formatValue
-            ? formatValue(value)
-            : value.toLocaleString("fa-IR");
-          return (
-            <text
-              key={`ylabel-${i}`}
-              x={padding.left - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize="10"
-              fill="#64748b"
-            >
-              {formatted}
-            </text>
-          );
-        })}
-
-        {/* Legend */}
-        {showLegend && (
-          <g transform={`translate(${width - padding.right + 10}, ${padding.top + 10})`}>
-            {series.map((s, i) => (
-              <g key={`legend-${i}`} transform={`translate(0, ${i * 20})`}>
-                <rect
-                  x={0}
-                  y={0}
-                  width={14}
-                  height={8}
-                  fill={s.color}
-                  rx={1}
-                />
-                <text
-                  x={18}
-                  y={12}
-                  fontSize="11"
-                  fill="#334155"
-                >
-                  {s.label}
-                </text>
-              </g>
-            ))}
-          </g>
-        )}
-      </svg>
+    <div style={{ height }} dir="ltr">
+      <ResponsiveContainer width="100%" height="100%">
+        <RLineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#223041" />
+          <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={false} tickLine={false} interval="preserveStart" minTickGap={24} />
+          <YAxis tick={AXIS_TICK} tickFormatter={fmt} axisLine={false} tickLine={false} width={56} orientation="right" />
+          <Tooltip content={<DarkTooltip formatter={formatValue} />} />
+          {showLegend ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
+          {series.map((s) => (
+            <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={hex(s.color)} strokeWidth={2.5} dot={{ r: 3, fill: hex(s.color) }} activeDot={{ r: 5 }} />
+          ))}
+        </RLineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -347,8 +122,8 @@ export function PieChart({
   data,
   labelKey,
   valueKey,
-  colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"],
-  height = 250,
+  colors = ["accent", "cyan", "violet", "warn", "ok", "indigo"],
+  height = 280,
   showLegend = true,
 }: {
   data: any[];
@@ -359,268 +134,48 @@ export function PieChart({
   showLegend?: boolean;
 }) {
   if (!data.length) return null;
-
-  const total = data.reduce((sum, d) => sum + (Number(d[valueKey]) || 0), 0);
-  const padding = { top: 20, right: 20, bottom: 20, left: 20 };
-  const chartHeight = height;
-  const width = 100;
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-  const radius = Math.min(innerWidth, innerHeight) / 2 * 0.8;
-  const cx = padding.left + innerWidth / 2;
-  const cy = padding.top + innerHeight / 2;
-
   return (
-    <div className="relative w-full h-[{chartHeight}px]" style={{ height: chartHeight }}>
-      <svg
-        className="absolute inset-0"
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${width} ${chartHeight}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Pie chart showing data distribution"
-      >
-        {/* Pie slices */}
-        {data.map((d, index) => {
-          const value = Number(d[valueKey]) || 0;
-          const percentage = total > 0 ? (value / total) * 360 : 0;
-          const startAngle =
-            data
-              .slice(0, index)
-              .reduce((sum, d) => sum + (Number(d[valueKey]) || 0), 0) /
-              total *
-              360;
-          const endAngle = startAngle + percentage;
-
-          const startX = cx + radius * Math.cos(((startAngle - 90) * Math.PI) / 180);
-          const startY = cy + radius * Math.sin(((startAngle - 90) * Math.PI) / 180);
-          const endX = cx + radius * Math.cos(((endAngle - 90) * Math.PI) / 180);
-          const endY = cy + radius * Math.sin(((endAngle - 90) * Math.PI) / 180);
-
-          const largeArc = percentage > 180 ? 1 : 0;
-
-          const pathD = [
-            `M ${cx} ${cy}`,
-            `L ${startX} ${startY}`,
-            `A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY}`,
-            "Z",
-          ].join(" ");
-
-          return (
-            <path
-              key={`pie-${index}`}
-              d={pathD}
-              fill={colors[index % colors.length]}
-            />
-          );
-        })}
-
-        {/* Legend */}
-        {showLegend && (
-          <g transform={`translate(${width - padding.right + 10}, ${padding.top + 10})`}>
-            {data.map((d, index) => (
-              <g key={`legend-${index}`} transform={`translate(0, ${index * 20})`}>
-                <rect
-                  x={0}
-                  y={0}
-                  width={14}
-                  height={8}
-                  fill={colors[index % colors.length]}
-                  rx={1}
-                />
-                <text
-                  x={18}
-                  y={12}
-                  fontSize="11"
-                  fill="#334155"
-                >
-                  {String(d[labelKey])}
-                </text>
-              </g>
+    <div style={{ height }} dir="ltr">
+      <ResponsiveContainer width="100%" height="100%">
+        <RPieChart>
+          <Pie data={data} dataKey={valueKey} nameKey={labelKey} innerRadius="52%" outerRadius="80%" paddingAngle={2} strokeWidth={0}>
+            {data.map((_, i) => (
+              <Cell key={i} fill={hex(colors[i % colors.length])} />
             ))}
-          </g>
-        )}
-      </svg>
+          </Pie>
+          <Tooltip content={<DarkTooltip />} />
+          {showLegend ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
+        </RPieChart>
+      </ResponsiveContainer>
     </div>
   );
 }
 
-export function AreaChart({
-  data,
-  xKey,
-  series,
-  height = 250,
-  showLegend = true,
-  formatValue,
-}: ChartProps) {
+export function AreaChart({ data, xKey, series, height = 280, showLegend = true, formatValue }: ChartProps) {
   if (!data.length) return null;
-
-  const maxValue = Math.max(
-    ...data.flatMap((d) => series.map((s) => Number(d[s.key])))
-  );
-  const padding = { top: 20, right: 30, bottom: 30, left: 60 };
-  const chartHeight = height;
-  const width = 100;
-  const innerWidth = width - padding.left - padding.right;
-  const innerHeight = chartHeight - padding.top - padding.bottom;
-
+  const fmt = formatValue ?? faNum;
   return (
-    <div className="relative w-full h-[{chartHeight}px]" style={{ height: chartHeight }}>
-      <svg
-        className="absolute inset-0"
-        width="100%"
-        height="100%"
-        viewBox={`0 0 ${width} ${chartHeight}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Area chart showing data trends"
-      >
-        {/* Horizontal grid lines */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const y = padding.top + (innerHeight * i) / 4;
-          return (
-            <line
-              key={`hgrid-${i}`}
-              x1={padding.left}
-              y1={y}
-              x2={width - padding.right}
-              y2={y}
-              stroke="#e2e8f0"
-              strokeWidth="1"
-            />
-          );
-        })}
-
-        {/* Areas */}
-        {series.map((serie, serieIndex) => {
-          const points = data
-            .map((d, index) => {
-              const value = Number(d[serie.key]) || 0;
-              const x =
-                padding.left +
-                (innerWidth * index) / (data.length - 1 || 1);
-              const y =
-                chartHeight -
-                padding.bottom -
-                (innerHeight * value) / (maxValue || 1);
-              return `${x},${y}`;
-            })
-            .concat([
-              `${padding.left + innerWidth} ${chartHeight - padding.bottom}`,
-              `${padding.left} ${chartHeight - padding.bottom}`,
-            ])
-            .join(" ");
-
-          return (
-            <path
-              key={`area-${serieIndex}`}
-              d={`M${points}`}
-              fill={serie.color}
-              fillOpacity="0.2"
-            />
-          );
-        })}
-
-        {/* Lines on top */}
-        {series.map((serie, serieIndex) => {
-          const points = data
-            .map((d, index) => {
-              const value = Number(d[serie.key]) || 0;
-              const x =
-                padding.left +
-                (innerWidth * index) / (data.length - 1 || 1);
-              const y =
-                chartHeight -
-                padding.bottom -
-                (innerHeight * value) / (maxValue || 1);
-              return `${x},${y}`;
-            })
-            .join(" ");
-
-          return (
-            <path
-              key={`line-${serieIndex}`}
-              d={`M${points}`}
-              fill="none"
-              stroke={serie.color}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          );
-        })}
-
-        {/* X-axis labels (categories) */}
-        {data.map((d, index) => {
-          const x =
-            padding.left +
-            (innerWidth * index) / (data.length - 1 || 1);
-          const y = chartHeight - padding.bottom + 18;
-          return (
-            <text
-              key={`xlabel-${index}`}
-              x={x}
-              y={y}
-              textAnchor="middle"
-              fontSize="11"
-              fill="#64748b"
-            >
-              {String(d[xKey])}
-            </text>
-          );
-        })}
-
-        {/* Y-axis labels (values) */}
-        {Array.from({ length: 5 }).map((_, i) => {
-          const value = (maxValue * i) / 4;
-          const y =
-            chartHeight -
-            padding.bottom -
-            (innerHeight * i) / 4;
-          const formatted = formatValue
-            ? formatValue(value)
-            : value.toLocaleString("fa-IR");
-          return (
-            <text
-              key={`ylabel-${i}`}
-              x={padding.left - 8}
-              y={y + 4}
-              textAnchor="end"
-              fontSize="10"
-              fill="#64748b"
-            >
-              {formatted}
-            </text>
-          );
-        })}
-
-        {/* Legend */}
-        {showLegend && (
-          <g transform={`translate(${width - padding.right + 10}, ${padding.top + 10})`}>
-            {series.map((s, i) => (
-              <g key={`legend-${i}`} transform={`translate(0, ${i * 20})`}>
-                <rect
-                  x={0}
-                  y={0}
-                  width={14}
-                  height={8}
-                  fill={s.color}
-                  rx={1}
-                />
-                <text
-                  x={18}
-                  y={12}
-                  fontSize="11"
-                  fill="#334155"
-                >
-                  {s.label}
-                </text>
-              </g>
+    <div style={{ height }} dir="ltr">
+      <ResponsiveContainer width="100%" height="100%">
+        <RAreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <defs>
+            {series.map((s) => (
+              <linearGradient key={s.key} id={`ag-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={hex(s.color)} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={hex(s.color)} stopOpacity={0.04} />
+              </linearGradient>
             ))}
-          </g>
-        )}
-      </svg>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#223041" />
+          <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={false} tickLine={false} interval="preserveStart" minTickGap={24} />
+          <YAxis tick={AXIS_TICK} tickFormatter={fmt} axisLine={false} tickLine={false} width={48} orientation="right" />
+          <Tooltip content={<DarkTooltip formatter={formatValue} />} cursor={{ stroke: "#2d3e52" }} />
+          {showLegend ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null}
+          {series.map((s) => (
+            <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={hex(s.color)} strokeWidth={2.5} fill={`url(#ag-${s.key})`} />
+          ))}
+        </RAreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }

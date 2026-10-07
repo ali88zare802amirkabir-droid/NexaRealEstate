@@ -12,7 +12,7 @@ export default function DiscoverPage() {
   const [filter, setFilter] = useState({
     purpose: "All",
     type: "All",
-    priceRange: { min: 0, max: 1000000 },
+    priceMax: 0,
     area: "All",
   });
 
@@ -22,7 +22,7 @@ export default function DiscoverPage() {
   const filteredProperties = activeProperties.filter((p) => {
     if (filter.purpose !== "All" && p.purpose !== filter.purpose) return false;
     if (filter.type !== "All" && p.type !== filter.type) return false;
-    if (p.price < filter.priceRange.min || p.price > filter.priceRange.max) return false;
+    if (filter.priceMax > 0 && p.price > filter.priceMax) return false;
     if (filter.area !== "All" && p.areaId !== filter.area) return false;
     return true;
   });
@@ -36,26 +36,57 @@ export default function DiscoverPage() {
 
   return (
     <div className="space-y-8">
-      <section>
-        <h1 className="text-[20px] font-extrabold text-ink">کاوش املاک</h1>
-        <p className="text-[13.5px] text-ink-3">املاک برگزیده و آنلاین در سراسر ایران را کشف کنید.</p>
-      </section>
-
-      <section className="panel grid grid-cols-2 gap-4 md:grid-cols-4">
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="flex items-center gap-3">
-              <div className={cn("flex size-10 items-center justify-center rounded-lg", s.color)}>
-                <Icon className="size-5" />
-              </div>
-              <div>
-                <p className="text-[13.5px] font-bold text-ink">{s.value.toLocaleString("fa-IR")}</p>
-                <p className="text-[11px] text-ink-3">{s.label}</p>
-              </div>
+      <section className="panel relative overflow-hidden p-0">
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden="true"
+          style={{
+            background:
+              "radial-gradient(520px 200px at 85% 0%, rgba(76,154,255,0.22), transparent 70%), radial-gradient(420px 180px at 10% 100%, rgba(47,212,232,0.14), transparent 70%)",
+          }}
+        />
+        <div className="relative flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11.5px] font-semibold text-accent">پلتفرم خرید، فروش و اجاره ملک</p>
+            <h1 className="mt-1.5 text-[22px] font-extrabold leading-9 text-ink sm:text-[26px]">
+              خانه بعدی‌ات را همین‌جا پیدا کن
+            </h1>
+            <p className="mt-1.5 max-w-xl text-[13px] leading-6 text-ink-3">
+              {formatNumber(activeProperties.length)} ملک فعال در {formatNumber(areas.length)} منطقه — جستجو، مقایسه روی نقشه، بازدید و گفتگو با مشاور، همه در یک‌جا.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <a
+                href="/properties"
+                className="focusable inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-4 text-[13px] font-bold text-white transition-opacity hover:opacity-90"
+              >
+                مشاهده املاک
+              </a>
+              <a
+                href="/map"
+                className="focusable inline-flex h-9 items-center gap-2 rounded-lg border border-edge bg-surface-2 px-4 text-[13px] font-semibold text-ink-2 transition-colors hover:text-ink"
+              >
+                <MapPin className="size-4" />
+                جستجو روی نقشه
+              </a>
             </div>
-          );
-        })}
+          </div>
+          <div className="grid shrink-0 grid-cols-2 gap-2.5 lg:w-72">
+            {stats.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className="flex items-center gap-2.5 rounded-xl border border-edge bg-surface/70 p-3">
+                  <div className={cn("flex size-9 items-center justify-center rounded-lg", s.color)}>
+                    <Icon className="size-4.5" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-extrabold text-ink">{formatNumber(s.value)}</p>
+                    <p className="text-[10.5px] text-ink-3">{s.label}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <section className="panel grid gap-4 md:grid-cols-[240px_1fr]">
@@ -124,13 +155,15 @@ export default function DiscoverPage() {
               {filteredProperties.length} ملک — نمایش {Math.min(filteredProperties.length, 24)} مورد از {activeProperties.length}
             </p>
               <select
-                value={filter.priceRange.max}
-                onChange={(e) => setFilter((f) => ({ ...f, priceRange: { ...f.priceRange, max: Number(e.target.value) } }))}
+                value={filter.priceMax}
+                onChange={(e) => setFilter((f) => ({ ...f, priceMax: Number(e.target.value) }))}
                 className="field py-1 text-[11.5px]"
+                aria-label="سقف قیمت"
               >
-              <option value="200000">۲۰۰٫۰۰۰٫۰۰۰</option>
-              <option value="500000">۵۰۰٫۰۰۰٫۰۰۰</option>
-              <option value="1000000" selected>۱٫۰۰۰٫۰۰۰٫۰۰۰</option>
+              <option value={0}>بدون سقف قیمت</option>
+              <option value={10_000_000_000}>تا ۱۰ میلیارد</option>
+              <option value={50_000_000_000}>تا ۵۰ میلیارد</option>
+              <option value={200_000_000_000}>تا ۲۰۰ میلیارد</option>
             </select>
           </div>
 
